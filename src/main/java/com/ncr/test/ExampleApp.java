@@ -6,11 +6,11 @@ import org.springframework.context.annotation.ComponentScan;
 
 @EnableAutoConfiguration
 @ComponentScan
-public class Example {
+public class ExampleApp {
 
 	public static void main(String[] args) {
 		
-		SpringApplication.run(Example.class, args);
+		SpringApplication.run(ExampleApp.class, args);
 	}
 
 }

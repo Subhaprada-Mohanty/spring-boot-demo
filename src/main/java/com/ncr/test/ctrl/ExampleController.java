@@ -1,23 +1,26 @@
 package com.ncr.test.ctrl;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
 
-import javax.validation.Valid;
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.ValidatorFactory;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ncr.test.bo.UserBO;
-import com.ncr.test.dto.ErrorDTO;
 import com.ncr.test.dto.FieldErrorDto;
+import com.ncr.test.helper.UserValidationHelper;
 import com.ncr.test.utils.UserBOValidator;
 
 
@@ -25,42 +28,40 @@ import com.ncr.test.utils.UserBOValidator;
 @RequestMapping("/ex")
 public class ExampleController {
 	
-
+	@Autowired
+     private UserValidationHelper uservalidationHelper;
+	
+	private static Logger log = LogManager.getLogger(ExampleController.class);
 	
 	@RequestMapping(value="/",method = RequestMethod.GET)
 	public String home() {
+		log.info("logger for ::: {}",new String("home"));
 		return "hello world";
 	}
 	
 	@RequestMapping(value="/create",method = RequestMethod.POST,produces=MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<?> createUser(@RequestBody @Valid UserBO userBo, BindingResult error) {
-		
-		
+	public ResponseEntity<?> createUser(@RequestBody UserBO userBo, BindingResult error) {
+
+		ValidatorFactory vf = Validation.buildDefaultValidatorFactory();
+		javax.validation.Validator validator = vf.getValidator();
+		Set<ConstraintViolation<UserBO>> constraints = validator.validate(userBo);
+		if (constraints != null && constraints.size() > 0) {
+			uservalidationHelper.buildBindingResultFromConstraint(error, constraints);
+		}
 		if (!error.hasErrors()) {
 			new UserBOValidator().validate(userBo, error);
 		}
-		
+
 		if (error.hasErrors()) {
 			System.out.println("error" + error.getErrorCount());
 			FieldErrorDto dto = new FieldErrorDto();
-			buildError(error,dto);
+			uservalidationHelper.buildError(error, dto);
 			return ResponseEntity.badRequest().body(dto);
-		} 
+		}
 		return new ResponseEntity<String>(HttpStatus.OK);
 	}
 
-	private void buildError(BindingResult error,FieldErrorDto dto) {
-		List<ErrorDTO> errosList = new ArrayList<ErrorDTO>();
-		//StringBuilder sb = new StringBuilder();
-		for (FieldError oerror : error.getFieldErrors()) {
-			ErrorDTO errorDTO = new ErrorDTO();
-			errorDTO.setAttr(oerror.getField());
-			errorDTO.setMessage(oerror.getDefaultMessage());
-			errosList.add(errorDTO);
-		}
-		dto.setErrors(errosList);
-		
-	}
+	
 
 	
 
